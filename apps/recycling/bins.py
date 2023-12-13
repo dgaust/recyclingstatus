@@ -6,10 +6,11 @@ import adbase as ad
 
 
 class bins(hass.Hass):
+    todaysdate = datetime.now()
     
     def create_bin_entity(self, date, recycleweek):
         self.my_entity = self.get_entity("sensor.recyclingbindate")
-        currentdate = datetime.now().strftime("%d-%m-%Y - %H:%M:%S")
+        currentdate = self.todaysdate.strftime("%d-%m-%Y - %H:%M:%S")
         self.queuedlogger(currentdate)
         self.my_entity.set_state(state=recycleweek, attributes = {"last_update": currentdate, "red": True, "green": True, "yellow": recycleweek}, replace=True)
 
@@ -34,17 +35,16 @@ class bins(hass.Hass):
 
     def update_bin_dates(self):
         binstartindex = 0
-        default_start_date = datetime.now().date()
-        default_end_date = (datetime.now() + timedelta(days=365)).date()
+        default_start_date = self.todaysdate.date()
+        default_end_date = (self.todaysdate + timedelta(days=365)).date()
         api_url = f"https://wollongong.waste-info.com.au/api/v1/properties/70131.json"
         recycling_items = self.extract_recycling_items(api_url, default_start_date, default_end_date)     
         if recycling_items is not None:
             # get first entity start date, format and then check if in the next week. If not, return false, else true            
             date_format = '%Y-%m-%d'
             nextrecyclingdate = datetime.strptime(recycling_items[binstartindex].get('start'), date_format)
-            todaysdate =  datetime.now()
-            
-            while (nextrecyclingdate < todaysdate):
+           
+            while (nextrecyclingdate < self.todaysdate):
                 binstartindex += 1
                 self.log(f"next recycling date is in the past, moving to next index {binstartindex}")
                 nextrecyclingdate = datetime.strptime(recycling_items[binstartindex].get('start'), date_format)
@@ -54,13 +54,13 @@ class bins(hass.Hass):
             recycling_date_week = nextrecyclingdate.date().isocalendar()[1]
             self.queuedlogger(f"Next recycling week: {recycling_date_week}")
 
-            curr_week = datetime.now().isocalendar()[1]
+            curr_week = self.todaysdate.isocalendar()[1]
             self.queuedlogger(f"Current week: {curr_week}")
             # number of next week
-            next_week = (datetime.now() + timedelta(weeks=1)).isocalendar()[1]
+            next_week = (self.todaysdate + timedelta(weeks=1)).isocalendar()[1]
             self.queuedlogger(f"Next week: {next_week}")
             # number of the week after that
-            week_after_next_week = (datetime.now() + timedelta(weeks=2)).isocalendar()[1]
+            week_after_next_week = (self.todaysdate + timedelta(weeks=2)).isocalendar()[1]
             self.queuedlogger(f"Two weeks: {week_after_next_week}")
 
             if curr_week == recycling_date_week:
