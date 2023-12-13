@@ -78,6 +78,8 @@ class bins(hass.Hass):
         self.run_daily(self.run_daily_c, "01:13:00")
 
     def run_daily_c(self, cb_args):
+        # Make sure we update the date!
+        self.todaysdate = datetime.now()
         self.update_bin_dates()
 
     def queuedlogger(self, message):
