@@ -7,9 +7,24 @@ import adbase as ad
 
 class bins(hass.Hass):
     todaysdate = datetime.now()
-    
+    property_id = "0"
+    created_entity_name = "recyclingbindate"
+
+    def initialize(self):
+        try:
+            # Get the garage door and the top and bottom sensors
+            self.property_id = self.args.get('property_number')
+            self.created_entity_name = self.args.get('entity_id')
+            self.queuedlogger(f"Property id is: {self.property_id}")
+        except Exception as e:
+            # Log error if sensor settings retrieval fails
+            self.queuedlogger(f"Error getting property id: {e}")
+
+        self.update_bin_dates()
+        self.run_daily(self.run_daily_c, "01:13:00")
+
     def create_bin_entity(self, date, recycleweek):
-        self.my_entity = self.get_entity("sensor.recyclingbindate")
+        self.my_entity = self.get_entity(f"sensor.{self.created_entity_name}")
         currentdate = self.todaysdate.strftime("%d-%m-%Y - %H:%M:%S")
         self.queuedlogger(currentdate)
         self.my_entity.set_state(state=recycleweek, attributes = {"last_update": currentdate, "red": True, "green": True, "yellow": recycleweek}, replace=True)
@@ -37,7 +52,7 @@ class bins(hass.Hass):
         binstartindex = 0
         default_start_date = self.todaysdate.date()
         default_end_date = (self.todaysdate + timedelta(days=365)).date()
-        api_url = f"https://wollongong.waste-info.com.au/api/v1/properties/70131.json"
+        api_url = f"https://wollongong.waste-info.com.au/api/v1/properties/{self.property_id}.json"
         recycling_items = self.extract_recycling_items(api_url, default_start_date, default_end_date)     
         if recycling_items is not None:
             # get first entity start date, format and then check if in the next week. If not, return false, else true            
@@ -72,10 +87,6 @@ class bins(hass.Hass):
                 self.create_bin_entity(nextrecyclingdate, False)
                 pass
             # self.log(recycling_items)
-
-    def initialize(self):
-        self.update_bin_dates()
-        self.run_daily(self.run_daily_c, "01:13:00")
 
     def run_daily_c(self, cb_args):
         # Make sure we update the date!
